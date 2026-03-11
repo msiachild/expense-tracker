@@ -7,6 +7,16 @@ st.title("📒 每月开销记录")
 
 file = "expenses.csv"
 
+# 上传 CSV
+st.subheader("导入CSV")
+
+uploaded = st.file_uploader("选择CSV文件", type="csv")
+
+if uploaded is not None:
+    df_import = pd.read_csv(uploaded)
+    df_import.to_csv(file, index=False)
+    st.success("CSV导入成功")
+
 # 如果文件不存在就创建
 if not os.path.exists(file):
     df = pd.DataFrame(columns=["date","category","item","amount"])
@@ -14,6 +24,8 @@ if not os.path.exists(file):
 
 # 读取数据
 df = pd.read_csv(file)
+
+st.subheader("新增记录")
 
 d = st.date_input("日期", date.today())
 
