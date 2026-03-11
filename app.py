@@ -4,6 +4,7 @@ from datetime import date
 import gspread
 from google.oauth2.service_account import Credentials
 
+# Google Sheets 连接
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -16,7 +17,8 @@ creds = Credentials.from_service_account_file(
 
 client = gspread.authorize(creds)
 
-sheet = client.open("expense_log").sheet1
+# 用 Sheet ID 打开
+sheet = client.open_by_key("1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE").sheet1
 
 st.title("📒 每月开销记录")
 
@@ -35,7 +37,7 @@ if st.button("保存"):
     sheet.append_row([str(d), category, item, amount])
     st.success("记录成功")
 
-# 读取 Google Sheets 数据
+# 读取数据
 data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
@@ -43,16 +45,10 @@ st.subheader("记录")
 st.dataframe(df)
 
 st.subheader("总开销")
-
 if not df.empty:
     st.write(df["amount"].sum())
 
 st.subheader("类别开销汇总")
-
 if not df.empty:
     category_summary = df.groupby("category")["amount"].sum()
     st.dataframe(category_summary)
-
-
-
-
