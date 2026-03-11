@@ -1,30 +1,19 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-import gspread
-from google.oauth2.service_account import Credentials
-
-# Google API scope
-scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-
-# 读取 Streamlit Secrets
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scope
-)
-
-client = gspread.authorize(creds)
-
-# 打开 Google Sheet
-sheet = client.open_by_key(
-    "1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE"
-).sheet1
-
+import os
 
 st.title("📒 每月开销记录")
+
+file = "expenses.csv"
+
+# 如果文件不存在就创建
+if not os.path.exists(file):
+    df = pd.DataFrame(columns=["date","category","item","amount"])
+    df.to_csv(file, index=False)
+
+# 读取数据
+df = pd.read_csv(file)
 
 d = st.date_input("日期", date.today())
 
@@ -38,20 +27,16 @@ item = st.text_input("项目")
 amount = st.number_input("金额", min_value=0.0)
 
 if st.button("保存"):
-    sheet.append_row([str(d), category, item, amount])
+    new = pd.DataFrame([[d, category, item, amount]],
+                       columns=["date","category","item","amount"])
+
+    df = pd.concat([df, new], ignore_index=True)
+    df.to_csv(file, index=False)
+
     st.success("记录成功")
 
-
-# 读取数据
-data = sheet.get_all_records()
-df = pd.DataFrame(data)
-
 st.subheader("记录")
-
-if not df.empty:
-    st.dataframe(df)
-else:
-    st.write("暂无记录")
+st.dataframe(df)
 
 st.subheader("总开销")
 
@@ -61,5 +46,5 @@ if not df.empty:
 st.subheader("类别开销汇总")
 
 if not df.empty:
-    category_summary = df.groupby("category")["amount"].sum()
-    st.dataframe(category_summary)
+    summary = df.groupby("category")["amount"].sum()
+    st.dataframe(summary)
