@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
 # Google Sheets 连接
 scope = [
@@ -56,4 +56,5 @@ st.subheader("类别开销汇总")
 if not df.empty:
     category_summary = df.groupby("category")["amount"].sum()
     st.dataframe(category_summary)
+
 
