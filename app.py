@@ -4,19 +4,15 @@ from datetime import date
 import gspread
 from google.oauth2.service_account import Credentials
 
-# Google Sheets 连接
 scope = [
-    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-import json
-
-with open("credentials.json") as f:
-    creds_dict = json.load(f)
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict, scope)
+creds = Credentials.from_service_account_file(
+    "credentials.json",
+    scopes=scope
+)
 
 client = gspread.authorize(creds)
 
@@ -56,6 +52,7 @@ st.subheader("类别开销汇总")
 if not df.empty:
     category_summary = df.groupby("category")["amount"].sum()
     st.dataframe(category_summary)
+
 
 
 
