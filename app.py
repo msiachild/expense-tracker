@@ -10,8 +10,13 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "credentials.json", scope)
+import json
+
+with open("credentials.json") as f:
+    creds_dict = json.load(f)
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    creds_dict, scope)
 
 client = gspread.authorize(creds)
 
@@ -51,3 +56,4 @@ st.subheader("类别开销汇总")
 if not df.empty:
     category_summary = df.groupby("category")["amount"].sum()
     st.dataframe(category_summary)
+
