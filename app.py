@@ -3,24 +3,15 @@ from datetime import date
 import requests
 import pandas as pd
 
-# ==============================
-# Google Script API
-# ==============================
-
+# Google Apps Script API
 SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
 
-# ==============================
 # Google Sheet CSV
-# ==============================
-
 DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
 
 st.title("📒 每月收支记录")
 
-# ==============================
-# 新增记录
-# ==============================
-
+# ========= 新增记录 =========
 st.subheader("新增记录")
 
 d = st.date_input("日期", date.today())
@@ -40,7 +31,6 @@ category = st.selectbox(
 )
 
 item = st.text_input("项目")
-
 amount = st.number_input("金额", min_value=0.0)
 
 if st.button("保存记录"):
@@ -58,61 +48,46 @@ if st.button("保存记录"):
     except:
         st.error("写入失败，请检查 Google Script")
 
-# ==============================
-# 读取数据
-# ==============================
-
+# ========= 读取数据 =========
 st.subheader("📊 最新记录")
 
 try:
 
-    df = pd.read_csv(DATA_URL)
+    df = pd.read_csv(DATA_URL, thousands=",")
 
-    # 强制列名正确
-    df.columns = ["date","category","item","amount"]
+    # 确保列名正确
+    df.columns = ["date", "category", "item", "amount"]
 
-    # 清理数据
+    # 清理 category
     df["category"] = df["category"].astype(str).str.strip()
+
+    # 金额转数字
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
-    # 显示最近10条
     st.dataframe(df.tail(10))
 
-    # ==============================
-    # 计算收入
-    # ==============================
+    # ===== 收入 =====
+    income = df[df["category"] == "收入"]["amount"].sum()
 
-    income = df[df["category"].str.contains("收入")]["amount"].sum()
+    # ===== 支出 =====
+    expense = df[df["category"] != "收入"]["amount"].sum()
 
-    # ==============================
-    # 计算支出
-    # ==============================
-
-    expense = df[~df["category"].str.contains("收入")]["amount"].sum()
-
-    # ==============================
-    # 余额
-    # ==============================
-
+    # ===== 余额 =====
     balance = income - expense
 
     st.subheader("💰 当前余额")
-    st.write(round(balance,2))
+    st.write(round(balance, 2))
 
     st.subheader("💸 总支出")
-    st.write(round(expense,2))
+    st.write(round(expense, 2))
 
     st.subheader("💵 总收入")
-    st.write(round(income,2))
+    st.write(round(income, 2))
 
-    # ==============================
-    # 支出分类统计
-    # ==============================
-
+    # ===== 分类统计 =====
     st.subheader("📊 支出分类统计")
 
-    expense_df = df[~df["category"].str.contains("收入")]
-
+    expense_df = df[df["category"] != "收入"]
     category_summary = expense_df.groupby("category")["amount"].sum().reset_index()
 
     st.dataframe(category_summary)
