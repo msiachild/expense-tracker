@@ -5,6 +5,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 
+# 基础设置：尝试解决中文字体问题，若环境不支持则备选英文
+plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
 # ========================
 # 1. 链接配置
 # ========================
@@ -20,41 +24,38 @@ USER_CONFIG = {
 }
 
 # ========================
-# 2. 核心数据加载 (解决 0 数据问题)
+# 2. 核心数据处理函数
 # ========================
 def get_data(csv_url):
     try:
-        # 为所有链接添加时间戳，强制刷新，解决“删了数据还显示”或“有数据不显示”的问题
+        # 强制刷新缓存
         sep = "&" if "?" in csv_url else "?"
         final_url = f"{csv_url}{sep}t={int(time.time())}"
         
-        # 读取原始数据
-        df_raw = pd.read_csv(final_url, thousands=",", header=None)
+        # 读取数据 (不设标题，手动处理)
+        df_raw = pd.read_csv(final_url, header=None)
         
         if df_raw.empty:
             return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
-        # 智能判定：如果第一行包含字母标题，则剔除
-        first_row_str = str(df_raw.iloc[0].values).lower()
-        if "date" in first_row_str or "日期" in first_row_str or "category" in first_row_str:
+        # 判定并移除标题行
+        first_row_str = str(df_raw.iloc[0, 0]).lower()
+        if "date" in first_row_str or "日期" in first_row_str:
             df_raw = df_raw.drop(index=0)
 
-        # 强制设置列名
         df_raw.columns = ["date", "category", "item", "amount"]
-        
-        # 数据大扫除：去掉所有空格，统一分类名称
-        df_raw["category"] = df_raw["category"].astype(str).str.strip()
-        # 兼容英文分类
-        mapping = {"Income": "收入", "Food": "日常与餐饮", "Fixed": "固定开销", "Credit": "信用卡"}
-        df_raw["category"] = df_raw["category"].replace(mapping)
-        
-        # 强制转换金额
+
+        # --- 处理逗号和数字的关键步骤 ---
+        # 1. 处理金额：先转字符串 -> 去掉逗号 -> 转浮点数
+        df_raw["amount"] = df_raw["amount"].astype(str).str.replace(',', '', regex=False)
         df_raw["amount"] = pd.to_numeric(df_raw["amount"], errors='coerce').fillna(0)
         
-        # 去掉无效行
-        df_raw = df_raw.dropna(subset=["date"])
+        # 2. 处理分类：去空格 + 兼容变体
+        df_raw["category"] = df_raw["category"].astype(str).str.strip()
+        income_names = ["收入", "Income", "income", "INCOME"]
+        df_raw["category"] = df_raw["category"].replace(income_names, "收入")
         
-        return df_raw
+        return df_raw.dropna(subset=["date"])
     except Exception as e:
         return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
@@ -76,72 +77,65 @@ else:
     current_script = USER_CONFIG[view_mode]["script"]
 
 # ========================
-# 4. 记账功能 (修复缩进)
+# 4. 记账功能
 # ========================
 if current_script:
-    with st.expander("➕ 记一笔", expanded=True):
-        col_d, col_c = st.columns(2)
-        with col_d:
-            d = st.date_input("日期", date.today())
-        with col_c:
-            cat = st.selectbox("分类", ["日常与餐饮", "固定开销", "信用卡", "育儿与家庭", "其他支出", "收入"])
-        
+    with st.expander("➕ 快速记账", expanded=True):
+        d = st.date_input("日期", date.today())
+        cat = st.selectbox("分类", ["日常与餐饮", "固定开销", "信用卡", "育儿与家庭", "其他支出", "收入"])
         item = st.text_input("项目内容")
-        amt = st.number_input("金额", min_value=0.0, step=10.0)
+        amt = st.number_input("金额", min_value=0.0, step=100.0)
         
-        if st.button("确认保存"):
+        if st.button("点此保存"):
             payload = {"date": str(d), "category": cat, "item": item, "amount": amt}
             try:
                 res = requests.post(current_script, json=payload, timeout=10)
                 if res.status_code == 200:
-                    st.success("✅ 已存入 Google Sheet！正在更新图表...")
-                    time.sleep(1.5) # 给 Google 数据库同步留一点时间
+                    st.success("✅ 已同步到云端")
+                    time.sleep(1)
                     st.rerun()
-                else:
-                    st.error("保存失败，请检查 Script 权限")
             except:
-                st.error("网络连接超时")
+                st.error("网络请求失败")
 
 # ========================
-# 5. 图表与统计
+# 5. 指标与图表
 # ========================
 st.divider()
 
 if not df.empty:
-    # 统计核心指标
-    # 再次确保统计时分类名没有多余空格
-    df["category"] = df["category"].str.strip()
-    
-    total_income = df[df["category"] == "收入"]["amount"].sum()
-    total_expense = df[df["category"] != "收入"]["amount"].sum()
-    net_balance = total_income - total_expense
+    # 指标计算
+    income_mask = df["category"].str.contains("收入", na=False)
+    inc = df[income_mask]["amount"].sum()
+    exp = df[~income_mask]["amount"].sum()
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("总收入", f"RM {total_income:,.2f}")
-    m2.metric("总支出", f"RM {total_expense:,.2f}")
-    m3.metric("结余", f"RM {net_balance:,.2f}")
+    m1.metric("总收入", f"RM {inc:,.2f}")
+    m2.metric("总支出", f"RM {exp:,.2f}")
+    m3.metric("结余", f"RM {inc-exp:,.2f}")
 
-    # 可视化
+    # 图表展示
     st.write("---")
-    exp_df = df[df["category"] != "收入"]
+    exp_df = df[~income_mask]
     
     if not exp_df.empty:
-        c_left, c_right = st.columns(2)
-        with c_left:
-            st.write("**支出构成**")
-            pie_data = exp_df.groupby("category")["amount"].sum()
+        c1, c2 = st.columns(2)
+        with c1:
+            st.write("**支出分类 (EN)**")
+            summary = exp_df.groupby("category")["amount"].sum()
+            # 翻译分类名防止饼图乱码
+            trans_dict = {"日常与餐饮":"Food", "固定开销":"Fixed", "信用卡":"Credit", "育儿与家庭":"Childcare", "其他支出":"Other"}
+            summary.index = [trans_dict.get(x, x) for x in summary.index]
+            
             fig, ax = plt.subplots()
-            ax.pie(pie_data, labels=pie_data.index, autopct='%1.1f%%', startangle=90)
+            ax.pie(summary, labels=summary.index, autopct='%1.1f%%', startangle=90)
             st.pyplot(fig)
-        with c_right:
-            st.write("**支出趋势**")
-            # 简单处理日期排序
-            trend_data = exp_df.copy()
-            trend_data['date'] = pd.to_datetime(trend_data['date'])
-            daily_trend = trend_data.groupby('date')['amount'].sum()
-            st.line_chart(daily_trend)
+        with c2:
+            st.write("**每日趋势**")
+            trend = exp_df.copy()
+            trend['date'] = pd.to_datetime(trend['date'])
+            st.line_chart(trend.groupby('date')['amount'].sum())
 
-    st.write("**账目明细**")
+    st.write("**流水清单**")
     st.dataframe(df.sort_index(ascending=False), use_container_width=True)
 else:
-    st.info("💡 暂无数据。如果你刚删除了表格内容，请记一笔新账开始。")
+    st.info("💡 暂无数据。")
