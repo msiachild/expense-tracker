@@ -4,13 +4,34 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Google Script API
-SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
-
-# Google Sheet CSV
-DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
-
 st.title("💰 Personal Finance Dashboard")
+
+# ========================
+# User Selection
+# ========================
+
+user = st.selectbox("User", ["TTC", "Wife"])
+
+# TTC Google Script
+TTC_SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
+
+# TTC Google Sheet
+TTC_DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
+
+# Wife Google Script
+WIFE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxAtL7O1QOXnFJM7dg-uZ6NRkYBuzCaEbd9Twx3H2dV0Dk6i-zuesIA2PEX3ok-jwIn/exec"
+
+# Wife Google Sheet
+WIFE_DATA_URL = "https://docs.google.com/spreadsheets/d/1YIZt7mcYS7llnJa1JANB5rz-o2EE_AqOi1j2h8M97Vg/export?format=csv"
+
+# 根据用户切换
+if user == "TTC":
+    SHEET_URL = TTC_SHEET_URL
+    DATA_URL = TTC_DATA_URL
+else:
+    SHEET_URL = WIFE_SHEET_URL
+    DATA_URL = WIFE_DATA_URL
+
 
 # ========================
 # Add Record
@@ -120,7 +141,6 @@ try:
 
     category_summary = expense_df.groupby("category")["amount"].sum()
 
-    # 固定排序
     order = [
         "固定开销",
         "信用卡",
