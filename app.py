@@ -29,23 +29,37 @@ import time
 
 def get_data(csv_url):
     try:
-        # 判断链接类型
+        # 1. 处理缓存逻辑
         if "export?format=csv" in csv_url:
-            # 你原本的链接，不需要加时间戳
             final_url = csv_url
         else:
-            # 太太的发布链接，需要加时间戳防缓存
             sep = "&" if "?" in csv_url else "?"
             final_url = f"{csv_url}{sep}t={int(time.time())}"
         
-        # 读取数据
-        # 注意：如果你原本的表第一行就是数据（没有标题），请把 skiprows=1 删掉
-        df_raw = pd.read_csv(final_url, thousands=",", skiprows=1, names=["date", "category", "item", "amount"])
+        # 2. 读取数据 (先不跳过任何行)
+        df_raw = pd.read_csv(final_url, thousands=",", header=None)
         
-        # 彻底清洗：去掉空行
-        df_raw = df_raw.dropna(subset=["amount"]) 
+        if df_raw.empty:
+            return pd.DataFrame(columns=["date", "category", "item", "amount"])
+
+        # 3. 自动判断第一行：如果第一行第四列不能转成数字，说明它是标题，删掉它
+        try:
+            float(str(df_raw.iloc[0, 3]).replace(',', '')) 
+            # 如果成功，说明第一行就是数据，保持原样
+        except:
+            # 如果失败，说明第一行是文字标题，删掉第一行
+            df_raw = df_raw.drop(index=0)
+
+        # 4. 强制命名列名
+        df_raw.columns = ["date", "category", "item", "amount"]
+        
+        # 5. 清洗无效行
+        df_raw = df_raw.dropna(subset=["amount"])
+        
         return df_raw
     except Exception as e:
+        # 打印错误到后台，方便调试
+        print(f"Error loading data: {e}")
         return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
 # ========================
@@ -113,5 +127,6 @@ if not df.empty:
     st.dataframe(df.tail(5), use_container_width=True)
 else:
     st.info("当前账本还没有数据。")
+
 
 
