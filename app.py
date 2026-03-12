@@ -3,12 +3,7 @@ from datetime import date
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
-import plotly.express as px  # 用于解决中文乱码并增加交互性
 import time
-
-# 基础设置
-plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
-plt.rcParams['axes.unicode_minus'] = False
 
 # ========================
 # 1. 链接配置
@@ -25,14 +20,13 @@ USER_CONFIG = {
 }
 
 # ========================
-# 2. 核心数据处理函数
+# 2. 核心数据处理
 # ========================
 def get_data(csv_url):
     try:
         sep = "&" if "?" in csv_url else "?"
         final_url = f"{csv_url}{sep}t={int(time.time())}"
         df_raw = pd.read_csv(final_url, header=None)
-        
         if df_raw.empty:
             return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
@@ -41,14 +35,11 @@ def get_data(csv_url):
             df_raw = df_raw.drop(index=0)
 
         df_raw.columns = ["date", "category", "item", "amount"]
-        df_raw["amount"] = df_raw["amount"].astype(str).str.replace(',', '', regex=False)
-        df_raw["amount"] = pd.to_numeric(df_raw["amount"], errors='coerce').fillna(0)
+        df_raw["amount"] = pd.to_numeric(df_raw["amount"].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         df_raw["category"] = df_raw["category"].astype(str).str.strip()
-        income_names = ["收入", "Income", "income", "INCOME"]
-        df_raw["category"] = df_raw["category"].replace(income_names, "收入")
-        
+        df_raw["category"] = df_raw["category"].replace(["Income", "income", "INCOME"], "收入")
         return df_raw.dropna(subset=["date"])
-    except Exception as e:
+    except:
         return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
 # ========================
@@ -69,7 +60,7 @@ else:
     current_script = USER_CONFIG[view_mode]["script"]
 
 # ========================
-# 4. 记账功能
+# 4. 记账功能 (个人页显示)
 # ========================
 if current_script:
     with st.expander("➕ 快速记账", expanded=True):
@@ -77,17 +68,16 @@ if current_script:
         cat = st.selectbox("分类", ["日常与餐饮", "固定开销", "信用卡", "育儿与家庭", "其他支出", "收入"])
         item = st.text_input("项目内容")
         amt = st.number_input("金额", min_value=0.0, step=100.0)
-        
         if st.button("点此保存"):
             payload = {"date": str(d), "category": cat, "item": item, "amount": amt}
             try:
                 res = requests.post(current_script, json=payload, timeout=10)
                 if res.status_code == 200:
-                    st.success("✅ 已同步到云端")
+                    st.success("✅ 已保存")
                     time.sleep(1)
                     st.rerun()
             except:
-                st.error("网络请求失败")
+                st.error("失败")
 
 # ========================
 # 5. 指标与图表
@@ -95,7 +85,6 @@ if current_script:
 st.divider()
 
 if not df.empty:
-    # 指标计算
     income_mask = df["category"].str.contains("收入", na=False)
     inc = df[income_mask]["amount"].sum()
     exp = df[~income_mask]["amount"].sum()
@@ -105,21 +94,22 @@ if not df.empty:
     m2.metric("总支出", f"RM {exp:,.2f}")
     m3.metric("结余", f"RM {inc-exp:,.2f}")
 
-    # 图表展示区
-    st.write("---")
     exp_df = df[~income_mask]
-    
     if not exp_df.empty:
+        st.write("---")
         c1, c2 = st.columns(2)
         with c1:
             st.write("**支出分类占比**")
-            # 汇总数据
             summary = exp_df.groupby("category")["amount"].sum().reset_index()
-            # Plotly 饼图完美支持中文
-            fig = px.pie(summary, values='amount', names='category', hole=0.4,
-                         color_discrete_sequence=px.colors.qualitative.Set3)
-            fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True)
-            st.plotly_chart(fig, use_container_width=True)
+            # 使用 Streamlit 内置的 altair 绘制饼图，完美解决中文乱码
+            import altair as alt
+            base = alt.Chart(summary).encode(
+                theta=alt.Theta("amount:Q", stack=True),
+                color=alt.Color("category:N", legend=alt.Legend(title="类别")),
+                tooltip=["category", "amount"]
+            )
+            pie = base.mark_arc(outerRadius=80)
+            st.altair_chart(pie, use_container_width=True)
             
         with c2:
             st.write("**每日趋势**")
@@ -127,26 +117,22 @@ if not df.empty:
             trend['date'] = pd.to_datetime(trend['date'])
             st.line_chart(trend.groupby('date')['amount'].sum())
 
-    # --- 数据清单展示逻辑 ---
+    # --- 差异化清单展示 ---
     if view_mode == "家庭汇总":
         st.subheader("📁 各类别支出统计")
         if not exp_df.empty:
-            # 执行分类汇总
+            # 聚合计算
             cat_summary = exp_df.groupby("category")["amount"].agg(['sum', 'count']).reset_index()
-            cat_summary.columns = ["分类名称", "总支出 (RM)", "交易笔数"]
+            cat_summary.columns = ["分类名称", "总支出", "交易笔数"]
+            cat_summary["占比"] = (cat_summary["总支出"] / exp * 100).map("{:.1f}%".format)
+            cat_summary["总支出"] = cat_summary["总支出"].map("RM {:,.2f}".format)
             
-            # 计算百分比并美化格式
-            cat_summary["占比"] = (cat_summary["总支出 (RM)"] / exp * 100).map("{:.1f}%".format)
-            cat_summary["总支出 (RM)"] = cat_summary["总支出 (RM)"].map("RM {:,.2f}".format)
-            
-            # 以表格形式展示分类清单
+            # 以美观的表格展示汇总结果
             st.table(cat_summary.sort_values("交易笔数", ascending=False))
         else:
-            st.info("暂无支出分类数据")
+            st.info("暂无支出数据")
     else:
         st.subheader("📑 最近流水清单")
-        # 个人页面保持原有的明细清单
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
-
 else:
     st.info("💡 暂无数据。")
