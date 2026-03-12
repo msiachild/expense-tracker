@@ -4,44 +4,41 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# ===== 解决中文字体 =====
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
-
-# ===== Google Script API =====
+# Google Script API
 SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
 
-# ===== Google Sheet CSV =====
+# Google Sheet CSV
 DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
 
-st.title("📊 个人财务 Dashboard")
+st.title("💰 Personal Finance Dashboard")
 
-# =========================
-# 新增记录
-# =========================
+# ========================
+# Add Record
+# ========================
 
-st.subheader("新增记录")
+st.subheader("Add Record")
 
-d = st.date_input("日期", date.today())
+d = st.date_input("Date", date.today())
 
 category = st.selectbox(
-    "类别",
+    "Category",
     [
-        "收入",
-        "住房与贷款",
-        "通讯与网络",
-        "保险与健康",
-        "育儿与家庭",
-        "日常与餐饮",
-        "其他支出",
-        "信用卡"
+        "Income",
+        "Housing",
+        "Communication",
+        "Insurance",
+        "Childcare",
+        "Food",
+        "Other",
+        "Credit Card"
     ]
 )
 
-item = st.text_input("项目")
-amount = st.number_input("金额", min_value=0.0)
+item = st.text_input("Item")
 
-if st.button("保存记录"):
+amount = st.number_input("Amount", min_value=0.0)
+
+if st.button("Save Record"):
 
     data = {
         "date": str(d),
@@ -52,15 +49,15 @@ if st.button("保存记录"):
 
     try:
         requests.post(SHEET_URL, json=data)
-        st.success("记录成功")
+        st.success("Record Saved")
     except:
-        st.error("写入失败")
+        st.error("Failed to save record")
 
-# =========================
-# 读取数据
-# =========================
+# ========================
+# Load Data
+# ========================
 
-st.subheader("财务统计")
+st.subheader("Financial Overview")
 
 try:
 
@@ -73,48 +70,65 @@ try:
 
     df["date"] = pd.to_datetime(df["date"])
 
-    # ===== 收入 / 支出 =====
-    income = df[df["category"] == "收入"]["amount"].sum()
-    expense = df[df["category"] != "收入"]["amount"].sum()
+    # ========================
+    # Income / Expense
+    # ========================
+
+    income = df[df["category"] == "Income"]["amount"].sum()
+
+    expense = df[df["category"] != "Income"]["amount"].sum()
+
     balance = income - expense
 
     col1,col2,col3 = st.columns(3)
 
-    col1.metric("💵 总收入", round(income,2))
-    col2.metric("💸 总支出", round(expense,2))
-    col3.metric("💰 当前余额", round(balance,2))
+    col1.metric("Total Income", round(income,2))
+    col2.metric("Total Expense", round(expense,2))
+    col3.metric("Balance", round(balance,2))
 
-    # ===== 最近记录 =====
-    st.subheader("最近记录")
+    # ========================
+    # Recent Records
+    # ========================
+
+    st.subheader("Recent Records")
 
     st.dataframe(df.tail(10))
 
-    # ===== 分类统计 =====
-    st.subheader("支出分类统计")
+    # ========================
+    # Category Summary
+    # ========================
 
-    expense_df = df[df["category"] != "收入"]
+    st.subheader("Expense by Category")
+
+    expense_df = df[df["category"] != "Income"]
 
     category_summary = expense_df.groupby("category")["amount"].sum()
 
     st.dataframe(category_summary)
 
-    # ===== 饼图 =====
-    st.subheader("支出结构")
+    # ========================
+    # Pie Chart
+    # ========================
 
-    fig1, ax1 = plt.subplots()
+    st.subheader("Expense Distribution")
 
-    ax1.pie(
+    fig, ax = plt.subplots()
+
+    ax.pie(
         category_summary,
         labels=category_summary.index,
         autopct='%1.1f%%'
     )
 
-    ax1.axis('equal')
+    ax.axis('equal')
 
-    st.pyplot(fig1)
+    st.pyplot(fig)
 
-    # ===== 每日支出趋势 =====
-    st.subheader("每日支出趋势")
+    # ========================
+    # Daily Trend
+    # ========================
+
+    st.subheader("Daily Expense Trend")
 
     daily = expense_df.groupby("date")["amount"].sum()
 
@@ -122,5 +136,5 @@ try:
 
 except Exception as e:
 
-    st.error("读取数据失败")
+    st.error("Failed to load data")
     st.write(e)
