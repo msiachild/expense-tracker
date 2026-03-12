@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 
 # Google Script URL
-SHEET_URL = "你的GoogleScriptURL"
+SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
 
 # Google Sheet CSV读取
 DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/gviz/tq?tqx=out:csv"
@@ -75,3 +75,4 @@ try:
 
 except:
     st.write("暂无记录")
+
