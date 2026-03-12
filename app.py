@@ -67,7 +67,7 @@ try:
     df["category"] = df["category"].astype(str).str.strip()
 
     # ========================
-    # Category Mapping
+    # 旧分类 Mapping
     # ========================
 
     mapping = {
@@ -104,16 +104,6 @@ try:
     col3.metric("Balance", round(balance, 2))
 
     # ========================
-    # Fixed Expense Section
-    # ========================
-
-    st.subheader("固定开销")
-
-    fixed = df[df["category"] == "固定开销"]
-
-    st.dataframe(fixed)
-
-    # ========================
     # Recent Records
     # ========================
 
@@ -122,7 +112,7 @@ try:
     st.dataframe(df.tail(3))
 
     # ========================
-    # Category Summary
+    # Expense by Category
     # ========================
 
     st.subheader("Expense by Category")
@@ -134,16 +124,27 @@ try:
     st.dataframe(category_summary)
 
     # ========================
-    # Pie Chart
+    # Pie Chart (英文标签)
     # ========================
 
     st.subheader("Expense Distribution")
+
+    label_map = {
+        "固定开销": "Fixed",
+        "通讯与网络": "Communication",
+        "育儿与家庭": "Childcare",
+        "日常与餐饮": "Food",
+        "其他支出": "Other",
+        "信用卡": "Credit Card"
+    }
+
+    labels = [label_map.get(i, i) for i in category_summary.index]
 
     fig, ax = plt.subplots()
 
     ax.pie(
         category_summary,
-        labels=category_summary.index,
+        labels=labels,
         autopct='%1.1f%%'
     )
 
