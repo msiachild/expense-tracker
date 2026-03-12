@@ -20,18 +20,6 @@ st.subheader("Add Record")
 
 d = st.date_input("Date", date.today())
 
-mapping = {
-    "收入": "Income",
-    "住房与贷款": "Housing",
-    "通讯与网络": "Communication",
-    "保险与健康": "Insurance",
-    "育儿与家庭": "Childcare",
-    "日常与餐饮": "Food",
-    "其他支出": "Other",
-    "信用卡": "Credit Card"
-}
-
-df["category"] = df["category"].replace(mapping)
 category = st.selectbox(
     "Category",
     [
@@ -47,7 +35,6 @@ category = st.selectbox(
 )
 
 item = st.text_input("Item")
-
 amount = st.number_input("Amount", min_value=0.0)
 
 if st.button("Save Record"):
@@ -78,6 +65,21 @@ try:
     df.columns = ["date","category","item","amount"]
 
     df["category"] = df["category"].astype(str).str.strip()
+
+    # ===== 中文转英文 =====
+    mapping = {
+        "收入": "Income",
+        "住房与贷款": "Housing",
+        "通讯与网络": "Communication",
+        "保险与健康": "Insurance",
+        "育儿与家庭": "Childcare",
+        "日常与餐饮": "Food",
+        "其他支出": "Other",
+        "信用卡": "Credit Card"
+    }
+
+    df["category"] = df["category"].replace(mapping)
+
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
     df["date"] = pd.to_datetime(df["date"])
@@ -150,4 +152,3 @@ except Exception as e:
 
     st.error("Failed to load data")
     st.write(e)
-
