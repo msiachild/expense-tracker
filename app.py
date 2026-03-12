@@ -4,13 +4,27 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Google Script API
-SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
-
-# Google Sheet CSV
-DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
-
 st.title("💰 Personal Finance Dashboard")
+
+# ========================
+# User Select
+# ========================
+
+user = st.selectbox("User", ["TTC", "Wife"])
+
+URLS = {
+    "TTC": {
+        "script": "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec",
+        "data": "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
+    },
+    "Wife": {
+        "script": "https://script.google.com/macros/s/AKfycbwvRKC_cw0MqLUnsezPZdzigk4Z_3rAzp2fvNzMsJnEQW1nCVT2ps70TM9ObmnJwRau/exec",
+        "data": "https://docs.google.com/spreadsheets/d/1YIZt7mcYS7llnJa1JANB5rz-o2EE_AqOi1j2h8M97Vg/export?format=csv"
+    }
+}
+
+SHEET_URL = URLS[user]["script"]
+DATA_URL = URLS[user]["data"]
 
 # ========================
 # Add Record
@@ -65,10 +79,6 @@ try:
 
     df["category"] = df["category"].astype(str).str.strip()
 
-    # ========================
-    # 旧分类 Mapping
-    # ========================
-
     mapping = {
         "Housing": "固定开销",
         "Insurance": "固定开销",
@@ -86,12 +96,7 @@ try:
 
     df["date"] = pd.to_datetime(df["date"])
 
-    # ========================
-    # Income / Expense
-    # ========================
-
     income = df[df["category"] == "收入"]["amount"].sum()
-
     expense = df[df["category"] != "收入"]["amount"].sum()
 
     balance = income - expense
@@ -102,17 +107,9 @@ try:
     col2.metric("Total Expense", round(expense, 2))
     col3.metric("Balance", round(balance, 2))
 
-    # ========================
-    # Recent Records
-    # ========================
-
     st.subheader("Recent Records")
 
     st.dataframe(df.tail(3))
-
-    # ========================
-    # Expense by Category
-    # ========================
 
     st.subheader("Expense by Category")
 
@@ -120,7 +117,6 @@ try:
 
     category_summary = expense_df.groupby("category")["amount"].sum()
 
-    # 固定排序
     order = [
         "固定开销",
         "信用卡",
@@ -132,10 +128,6 @@ try:
     category_summary = category_summary.reindex(order).fillna(0)
 
     st.dataframe(category_summary)
-
-    # ========================
-    # Pie Chart
-    # ========================
 
     st.subheader("Expense Distribution")
 
@@ -160,10 +152,6 @@ try:
     ax.axis('equal')
 
     st.pyplot(fig)
-
-    # ========================
-    # Daily Trend
-    # ========================
 
     st.subheader("Daily Expense Trend")
 
