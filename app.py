@@ -4,17 +4,15 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Google Script API
-SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
+SHEET_URL = "你的script url"
 
-# Google Sheet CSV
-DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
+DATA_URL = "你的sheet csv url"
 
 st.title("💰 Personal Finance Dashboard")
 
-# ========================
+# =========================
 # Add Record
-# ========================
+# =========================
 
 st.subheader("Add Record")
 
@@ -35,6 +33,7 @@ category = st.selectbox(
 )
 
 item = st.text_input("Item")
+
 amount = st.number_input("Amount", min_value=0.0)
 
 if st.button("Save Record"):
@@ -46,109 +45,114 @@ if st.button("Save Record"):
         "amount": amount
     }
 
-    try:
-        requests.post(SHEET_URL, json=data)
-        st.success("Record Saved")
-    except:
-        st.error("Failed to save record")
+    requests.post(SHEET_URL, json=data)
 
-# ========================
+    st.success("Saved")
+
+# =========================
 # Load Data
-# ========================
+# =========================
 
-st.subheader("Financial Overview")
+df = pd.read_csv(DATA_URL, thousands=",")
 
-try:
+df.columns = ["date","category","item","amount"]
 
-    df = pd.read_csv(DATA_URL, thousands=",")
+df["date"] = pd.to_datetime(df["date"])
 
-    df.columns = ["date","category","item","amount"]
+df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
-    df["category"] = df["category"].astype(str).str.strip()
+# =========================
+# Current Month Data
+# =========================
 
-    # ===== 中文转英文 =====
-    mapping = {
-        "收入": "Income",
-        "住房与贷款": "Housing",
-        "通讯与网络": "Communication",
-        "保险与健康": "Insurance",
-        "育儿与家庭": "Childcare",
-        "日常与餐饮": "Food",
-        "其他支出": "Other",
-        "信用卡": "Credit Card"
-    }
+current_month = pd.Timestamp.today().month
 
-    df["category"] = df["category"].replace(mapping)
+current_year = pd.Timestamp.today().year
 
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
+month_df = df[
+    (df["date"].dt.month == current_month) &
+    (df["date"].dt.year == current_year)
+]
 
-    df["date"] = pd.to_datetime(df["date"])
+# =========================
+# Income / Expense
+# =========================
 
-    # ========================
-    # Income / Expense
-    # ========================
+income = month_df[month_df["category"] == "Income"]["amount"].sum()
 
-    income = df[df["category"] == "Income"]["amount"].sum()
+expense = month_df[month_df["category"] != "Income"]["amount"].sum()
 
-    expense = df[df["category"] != "Income"]["amount"].sum()
+balance = income - expense
 
-    balance = income - expense
+col1,col2,col3 = st.columns(3)
 
-    col1,col2,col3 = st.columns(3)
+col1.metric("Income", round(income,2))
+col2.metric("Expense", round(expense,2))
+col3.metric("Balance", round(balance,2))
 
-    col1.metric("Total Income", round(income,2))
-    col2.metric("Total Expense", round(expense,2))
-    col3.metric("Balance", round(balance,2))
+# =========================
+# Recent Records (3 only)
+# =========================
 
-    # ========================
-    # Recent Records
-    # ========================
+st.subheader("Recent Records")
 
-    st.subheader("Recent Records")
+st.dataframe(df.sort_values("date",ascending=False).head(3))
 
-    st.dataframe(df.tail(10))
+# =========================
+# Monthly Fixed Expenses
+# =========================
 
-    # ========================
-    # Category Summary
-    # ========================
+st.subheader("Monthly Fixed Expenses")
 
-    st.subheader("Expense by Category")
+fixed_categories = [
+    "Housing",
+    "Communication",
+    "Insurance",
+    "Childcare"
+]
 
-    expense_df = df[df["category"] != "Income"]
+fixed_df = month_df[month_df["category"].isin(fixed_categories)]
 
-    category_summary = expense_df.groupby("category")["amount"].sum()
+st.dataframe(fixed_df)
 
-    st.dataframe(category_summary)
+fixed_total = fixed_df["amount"].sum()
 
-    # ========================
-    # Pie Chart
-    # ========================
+st.write("Total Fixed Expense:", round(fixed_total,2))
 
-    st.subheader("Expense Distribution")
+# =========================
+# Monthly Expense Summary
+# =========================
 
-    fig, ax = plt.subplots()
+st.subheader("This Month Expense Summary")
 
-    ax.pie(
-        category_summary,
-        labels=category_summary.index,
-        autopct='%1.1f%%'
-    )
+expense_df = month_df[month_df["category"] != "Income"]
 
-    ax.axis('equal')
+category_summary = expense_df.groupby("category")["amount"].sum()
 
-    st.pyplot(fig)
+st.dataframe(category_summary)
 
-    # ========================
-    # Daily Trend
-    # ========================
+# =========================
+# Pie Chart
+# =========================
 
-    st.subheader("Daily Expense Trend")
+fig, ax = plt.subplots()
 
-    daily = expense_df.groupby("date")["amount"].sum()
+ax.pie(
+    category_summary,
+    labels=category_summary.index,
+    autopct='%1.1f%%'
+)
 
-    st.line_chart(daily)
+ax.axis('equal')
 
-except Exception as e:
+st.pyplot(fig)
 
-    st.error("Failed to load data")
-    st.write(e)
+# =========================
+# Daily Trend
+# =========================
+
+st.subheader("Daily Expense Trend")
+
+daily = expense_df.groupby("date")["amount"].sum()
+
+st.line_chart(daily)
