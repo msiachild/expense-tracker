@@ -12,19 +12,13 @@ st.title("💰 Personal Finance Dashboard")
 
 user = st.selectbox("User", ["TTC", "Wife"])
 
-URLS = {
-    "TTC": {
-        "script": "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec",
-        "data": "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
-    },
-    "Wife": {
-        "script": "https://script.google.com/macros/s/AKfycbyFb9k-EcAI-wcJuwxppFtgibwriOOu4FXwW5Cd6_M6ZGy-V8WLjbuJvADbNtwDfP3t/exec",
-        "data": "https://docs.google.com/spreadsheets/d/1YIZt7mcYS7llnJa1JANB5rz-o2EE_AqOi1j2h8M97Vg/export?format=csv"
-    }
-}
+if user == "TTC":
+    SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
+    DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
+else:
+    SHEET_URL = "https://script.google.com/macros/s/AKfycbyFb9k-EcAI-wcJuwxppFtgibwriOOu4FXwW5Cd6_M6ZGy-V8WLjbuJvADbNtwDfP3t/exec"
+    DATA_URL = "https://docs.google.com/spreadsheets/d/1YIZt7mcYS7llnJa1JANB5rz-o2EE_AqOi1j2h8M97Vg/export?format=csv"
 
-SHEET_URL = URLS[user]["script"]
-DATA_URL = URLS[user]["data"]
 
 # ========================
 # Add Record
@@ -59,15 +53,11 @@ if st.button("Save Record"):
     }
 
     try:
-        r = requests.post(SHEET_URL, json=data)
+        requests.post(SHEET_URL, json=data)
+        st.success("Record Saved")
+    except:
+        st.error("Failed to save record")
 
-        if r.status_code == 200:
-            st.success("Record Saved")
-        else:
-            st.error(f"Script error: {r.text}")
-
-    except Exception as e:
-        st.error(e)
 
 # ========================
 # Load Data
@@ -98,9 +88,7 @@ try:
 
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-
-    df = df.dropna(subset=["date"])
+    df["date"] = pd.to_datetime(df["date"])
 
     income = df[df["category"] == "收入"]["amount"].sum()
     expense = df[df["category"] != "收入"]["amount"].sum()
@@ -113,22 +101,12 @@ try:
     col2.metric("Total Expense", round(expense, 2))
     col3.metric("Balance", round(balance, 2))
 
-    # ========================
-    # Recent Records
-    # ========================
-
     st.subheader("Recent Records")
-
     st.dataframe(df.tail(3))
-
-    # ========================
-    # Expense by Category
-    # ========================
 
     st.subheader("Expense by Category")
 
     expense_df = df[df["category"] != "收入"]
-
     category_summary = expense_df.groupby("category")["amount"].sum()
 
     order = [
@@ -142,10 +120,6 @@ try:
     category_summary = category_summary.reindex(order).fillna(0)
 
     st.dataframe(category_summary)
-
-    # ========================
-    # Pie Chart
-    # ========================
 
     st.subheader("Expense Distribution")
 
@@ -171,10 +145,6 @@ try:
 
     st.pyplot(fig)
 
-    # ========================
-    # Daily Trend
-    # ========================
-
     st.subheader("Daily Expense Trend")
 
     daily = expense_df.groupby("date")["amount"].sum()
@@ -185,4 +155,3 @@ except Exception as e:
 
     st.error("Failed to load data")
     st.write(e)
-
