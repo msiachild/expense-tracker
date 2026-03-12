@@ -25,11 +25,10 @@ category = st.selectbox(
     [
         "收入",
         "固定开销",
-        "通讯与网络",
-        "育儿与家庭",
+        "信用卡",
         "日常与餐饮",
-        "其他支出",
-        "信用卡"
+        "育儿与家庭",
+        "其他支出"
     ]
 )
 
@@ -73,7 +72,7 @@ try:
     mapping = {
         "Housing": "固定开销",
         "Insurance": "固定开销",
-        "Communication": "通讯与网络",
+        "Communication": "其他支出",
         "Childcare": "育儿与家庭",
         "Food": "日常与餐饮",
         "Other": "其他支出",
@@ -121,21 +120,31 @@ try:
 
     category_summary = expense_df.groupby("category")["amount"].sum()
 
+    # 固定排序
+    order = [
+        "固定开销",
+        "信用卡",
+        "日常与餐饮",
+        "育儿与家庭",
+        "其他支出"
+    ]
+
+    category_summary = category_summary.reindex(order).fillna(0)
+
     st.dataframe(category_summary)
 
     # ========================
-    # Pie Chart (英文标签)
+    # Pie Chart
     # ========================
 
     st.subheader("Expense Distribution")
 
     label_map = {
         "固定开销": "Fixed",
-        "通讯与网络": "Communication",
-        "育儿与家庭": "Childcare",
+        "信用卡": "Credit Card",
         "日常与餐饮": "Food",
-        "其他支出": "Other",
-        "信用卡": "Credit Card"
+        "育儿与家庭": "Childcare",
+        "其他支出": "Other"
     }
 
     labels = [label_map.get(i, i) for i in category_summary.index]
@@ -165,5 +174,4 @@ try:
 except Exception as e:
 
     st.error("Failed to load data")
-
     st.write(e)
