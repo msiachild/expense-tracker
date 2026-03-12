@@ -51,6 +51,7 @@ if st.button("Save Record"):
     except:
         st.error("Failed to save record")
 
+
 # ========================
 # Load Data
 # ========================
@@ -61,9 +62,26 @@ try:
 
     df = pd.read_csv(DATA_URL, thousands=",")
 
-    df.columns = ["date","category","item","amount"]
+    df.columns = ["date", "category", "item", "amount"]
 
     df["category"] = df["category"].astype(str).str.strip()
+
+    # ========================
+    # Category Mapping
+    # ========================
+
+    mapping = {
+        "Housing": "固定开销",
+        "Insurance": "固定开销",
+        "Communication": "通讯与网络",
+        "Childcare": "育儿与家庭",
+        "Food": "日常与餐饮",
+        "Other": "其他支出",
+        "Credit Card": "信用卡",
+        "Income": "收入"
+    }
+
+    df["category"] = df["category"].replace(mapping)
 
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
@@ -79,14 +97,14 @@ try:
 
     balance = income - expense
 
-    col1,col2,col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    col1.metric("Total Income", round(income,2))
-    col2.metric("Total Expense", round(expense,2))
-    col3.metric("Balance", round(balance,2))
+    col1.metric("Total Income", round(income, 2))
+    col2.metric("Total Expense", round(expense, 2))
+    col3.metric("Balance", round(balance, 2))
 
     # ========================
-    # Fixed Expense
+    # Fixed Expense Section
     # ========================
 
     st.subheader("固定开销")
@@ -146,4 +164,5 @@ try:
 except Exception as e:
 
     st.error("Failed to load data")
+
     st.write(e)
