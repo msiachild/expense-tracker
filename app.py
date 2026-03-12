@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 st.title("💰 Personal Finance Dashboard")
 
 # ========================
-# User Select
+# User Selection
 # ========================
 
 user = st.selectbox("User", ["TTC", "Wife"])
@@ -64,7 +64,6 @@ if st.button("Save Record"):
     except:
         st.error("Failed to save record")
 
-
 # ========================
 # Load Data
 # ========================
@@ -73,7 +72,8 @@ st.subheader("Financial Overview")
 
 try:
 
-    df = pd.read_csv(DATA_URL, thousands=",")
+    # 只读取前4列，避免Google CSV空列
+    df = pd.read_csv(DATA_URL, usecols=[0,1,2,3])
 
     df.columns = ["date", "category", "item", "amount"]
 
@@ -94,7 +94,9 @@ try:
 
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    df = df.dropna(subset=["date"])
 
     income = df[df["category"] == "收入"]["amount"].sum()
     expense = df[df["category"] != "收入"]["amount"].sum()
@@ -107,9 +109,17 @@ try:
     col2.metric("Total Expense", round(expense, 2))
     col3.metric("Balance", round(balance, 2))
 
+    # ========================
+    # Recent Records
+    # ========================
+
     st.subheader("Recent Records")
 
     st.dataframe(df.tail(3))
+
+    # ========================
+    # Expense by Category
+    # ========================
 
     st.subheader("Expense by Category")
 
@@ -128,6 +138,10 @@ try:
     category_summary = category_summary.reindex(order).fillna(0)
 
     st.dataframe(category_summary)
+
+    # ========================
+    # Pie Chart
+    # ========================
 
     st.subheader("Expense Distribution")
 
@@ -152,6 +166,10 @@ try:
     ax.axis('equal')
 
     st.pyplot(fig)
+
+    # ========================
+    # Daily Trend
+    # ========================
 
     st.subheader("Daily Expense Trend")
 
