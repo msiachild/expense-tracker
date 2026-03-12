@@ -23,14 +23,13 @@ d = st.date_input("Date", date.today())
 category = st.selectbox(
     "Category",
     [
-        "Income",
-        "Housing",
-        "Communication",
-        "Insurance",
-        "Childcare",
-        "Food",
-        "Other",
-        "Credit Card"
+        "收入",
+        "固定开销",
+        "通讯与网络",
+        "育儿与家庭",
+        "日常与餐饮",
+        "其他支出",
+        "信用卡"
     ]
 )
 
@@ -66,20 +65,6 @@ try:
 
     df["category"] = df["category"].astype(str).str.strip()
 
-    # ===== 中文转英文 =====
-    mapping = {
-        "收入": "Income",
-        "住房与贷款": "Housing",
-        "通讯与网络": "Communication",
-        "保险与健康": "Insurance",
-        "育儿与家庭": "Childcare",
-        "日常与餐饮": "Food",
-        "其他支出": "Other",
-        "信用卡": "Credit Card"
-    }
-
-    df["category"] = df["category"].replace(mapping)
-
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
     df["date"] = pd.to_datetime(df["date"])
@@ -88,9 +73,9 @@ try:
     # Income / Expense
     # ========================
 
-    income = df[df["category"] == "Income"]["amount"].sum()
+    income = df[df["category"] == "收入"]["amount"].sum()
 
-    expense = df[df["category"] != "Income"]["amount"].sum()
+    expense = df[df["category"] != "收入"]["amount"].sum()
 
     balance = income - expense
 
@@ -101,12 +86,22 @@ try:
     col3.metric("Balance", round(balance,2))
 
     # ========================
+    # Fixed Expense
+    # ========================
+
+    st.subheader("固定开销")
+
+    fixed = df[df["category"] == "固定开销"]
+
+    st.dataframe(fixed)
+
+    # ========================
     # Recent Records
     # ========================
 
     st.subheader("Recent Records")
 
-    st.dataframe(df.tail(10))
+    st.dataframe(df.tail(3))
 
     # ========================
     # Category Summary
@@ -114,7 +109,7 @@ try:
 
     st.subheader("Expense by Category")
 
-    expense_df = df[df["category"] != "Income"]
+    expense_df = df[df["category"] != "收入"]
 
     category_summary = expense_df.groupby("category")["amount"].sum()
 
