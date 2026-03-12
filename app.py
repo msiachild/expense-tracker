@@ -65,6 +65,21 @@ try:
     df.columns = ["date","category","item","amount"]
 
     df["category"] = df["category"].astype(str).str.strip()
+
+    # ===== 中文转英文 =====
+    mapping = {
+        "收入": "Income",
+        "住房与贷款": "Housing",
+        "通讯与网络": "Communication",
+        "保险与健康": "Insurance",
+        "育儿与家庭": "Childcare",
+        "日常与餐饮": "Food",
+        "其他支出": "Other",
+        "信用卡": "Credit Card"
+    }
+
+    df["category"] = df["category"].replace(mapping)
+
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
     df["date"] = pd.to_datetime(df["date"])
@@ -74,7 +89,9 @@ try:
     # ========================
 
     income = df[df["category"] == "Income"]["amount"].sum()
+
     expense = df[df["category"] != "Income"]["amount"].sum()
+
     balance = income - expense
 
     col1,col2,col3 = st.columns(3)
@@ -84,31 +101,12 @@ try:
     col3.metric("Balance", round(balance,2))
 
     # ========================
-    # Recent Records (3 only)
+    # Recent Records
     # ========================
 
     st.subheader("Recent Records")
 
-    st.dataframe(df.sort_values("date",ascending=False).head(3))
-
-    # ========================
-    # Monthly Fixed Expenses
-    # ========================
-
-    st.subheader("Monthly Fixed Expenses")
-
-    fixed_categories = [
-        "Housing",
-        "Communication",
-        "Insurance",
-        "Childcare"
-    ]
-
-    fixed_df = df[df["category"].isin(fixed_categories)]
-
-    st.dataframe(fixed_df)
-
-    st.write("Total Fixed Expense:", round(fixed_df["amount"].sum(),2))
+    st.dataframe(df.tail(10))
 
     # ========================
     # Category Summary
