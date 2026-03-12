@@ -13,7 +13,7 @@ plt.rcParams['axes.unicode_minus'] = False
 # 1. 链接配置
 # ========================
 USER_CONFIG = {
-    "本人": {
+    "老公": {
         "script": "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec",
         "csv": "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
     },
@@ -63,11 +63,11 @@ def get_data(csv_url):
 # 3. 界面逻辑
 # ========================
 st.sidebar.title("👥 账户切换")
-view_mode = st.sidebar.radio("当前使用者：", ["本人", "太太", "家庭汇总"])
+view_mode = st.sidebar.radio("当前使用者：", ["老公", "太太", "家庭汇总"])
 
 if view_mode == "家庭汇总":
     st.title("🏠 家庭财务总览")
-    df_me = get_data(USER_CONFIG["本人"]["csv"])
+    df_me = get_data(USER_CONFIG["老公"]["csv"])
     df_wife = get_data(USER_CONFIG["太太"]["csv"])
     df = pd.concat([df_me, df_wife], ignore_index=True)
     current_script = None
@@ -139,3 +139,4 @@ if not df.empty:
     st.dataframe(df.sort_index(ascending=False), use_container_width=True)
 else:
     st.info("💡 暂无数据。")
+
