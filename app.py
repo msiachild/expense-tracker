@@ -4,14 +4,14 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# =========================
-# Google Apps Script API
-# =========================
+# ===== 解决中文字体 =====
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+
+# ===== Google Script API =====
 SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
 
-# =========================
-# Google Sheet CSV
-# =========================
+# ===== Google Sheet CSV =====
 DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
 
 st.title("📊 个人财务 Dashboard")
@@ -19,6 +19,7 @@ st.title("📊 个人财务 Dashboard")
 # =========================
 # 新增记录
 # =========================
+
 st.subheader("新增记录")
 
 d = st.date_input("日期", date.today())
@@ -58,6 +59,7 @@ if st.button("保存记录"):
 # =========================
 # 读取数据
 # =========================
+
 st.subheader("财务统计")
 
 try:
@@ -71,10 +73,7 @@ try:
 
     df["date"] = pd.to_datetime(df["date"])
 
-    # =========================
-    # 收入 / 支出
-    # =========================
-
+    # ===== 收入 / 支出 =====
     income = df[df["category"] == "收入"]["amount"].sum()
     expense = df[df["category"] != "收入"]["amount"].sum()
     balance = income - expense
@@ -85,18 +84,12 @@ try:
     col2.metric("💸 总支出", round(expense,2))
     col3.metric("💰 当前余额", round(balance,2))
 
-    # =========================
-    # 最近记录
-    # =========================
-
+    # ===== 最近记录 =====
     st.subheader("最近记录")
 
     st.dataframe(df.tail(10))
 
-    # =========================
-    # 分类统计
-    # =========================
-
+    # ===== 分类统计 =====
     st.subheader("支出分类统计")
 
     expense_df = df[df["category"] != "收入"]
@@ -105,22 +98,22 @@ try:
 
     st.dataframe(category_summary)
 
-    # =========================
-    # 饼图
-    # =========================
-
+    # ===== 饼图 =====
     st.subheader("支出结构")
 
     fig1, ax1 = plt.subplots()
-    ax1.pie(category_summary, labels=category_summary.index, autopct='%1.1f%%')
+
+    ax1.pie(
+        category_summary,
+        labels=category_summary.index,
+        autopct='%1.1f%%'
+    )
+
     ax1.axis('equal')
 
     st.pyplot(fig1)
 
-    # =========================
-    # 每日支出趋势
-    # =========================
-
+    # ===== 每日支出趋势 =====
     st.subheader("每日支出趋势")
 
     daily = expense_df.groupby("date")["amount"].sum()
@@ -128,5 +121,6 @@ try:
     st.line_chart(daily)
 
 except Exception as e:
+
     st.error("读取数据失败")
     st.write(e)
