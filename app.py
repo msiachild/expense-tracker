@@ -18,7 +18,7 @@ URLS = {
         "data": "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
     },
     "Wife": {
-        "script": "https://script.google.com/macros/s/AKfycbwvRKC_cw0MqLUnsezPZdzigk4Z_3rAzp2fvNzMsJnEQW1nCVT2ps70TM9ObmnJwRau/exec",
+        "script": "https://script.google.com/macros/s/AKfycbyFb9k-EcAI-wcJuwxppFtgibwriOOu4FXwW5Cd6_M6ZGy-V8WLjbuJvADbNtwDfP3t/exec",
         "data": "https://docs.google.com/spreadsheets/d/1YIZt7mcYS7llnJa1JANB5rz-o2EE_AqOi1j2h8M97Vg/export?format=csv"
     }
 }
@@ -185,3 +185,4 @@ except Exception as e:
 
     st.error("Failed to load data")
     st.write(e)
+
