@@ -59,12 +59,19 @@ if current_script:
         it = st.text_input("项目")
         amt = st.number_input("金额", min_value=0.0)
         
-        if st.button("点此保存"):
+if st.button("点此保存"):
             payload = {"date": str(d), "category": cat, "item": it, "amount": amt}
-            res = requests.post(current_script, json=payload)
-            if res.status_code == 200:
-                st.success("保存成功！")
-                st.rerun()
+            try:
+                res = requests.post(current_script, json=payload, timeout=10)
+                # 打印详细的状态码和返回内容
+                if res.status_code == 200:
+                    st.success("保存成功！")
+                    st.rerun()
+                else:
+                    st.error(f"保存失败。状态码: {res.status_code}")
+                    st.write("错误反馈:", res.text) # 这里会显示 Google 返回的具体报错
+            except Exception as e:
+                st.error(f"请求发送出错: {e}")
 
 # ========================
 # 5. 图表展示
@@ -93,3 +100,4 @@ if not df.empty:
     st.dataframe(df.tail(5), use_container_width=True)
 else:
     st.info("当前账本还没有数据。")
+
