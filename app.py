@@ -25,23 +25,27 @@ st.sidebar.title("👥 账户切换")
 view_mode = st.sidebar.radio("当前使用者：", ["本人", "太太", "家庭汇总"])
 
 # 统一的数据加载函数
+import time
+
 def get_data(csv_url):
     try:
-        # 【关键】在链接后加一个时间戳，防止浏览器缓存旧数据
-        # 这样每次刷新或保存，App 都会强制去 Google 拿最干净的数据
-        sep = "&" if "?" in csv_url else "?"
-        url_with_cache_buster = f"{csv_url}{sep}t={int(time.time())}"
+        # 判断链接类型
+        if "export?format=csv" in csv_url:
+            # 你原本的链接，不需要加时间戳
+            final_url = csv_url
+        else:
+            # 太太的发布链接，需要加时间戳防缓存
+            sep = "&" if "?" in csv_url else "?"
+            final_url = f"{csv_url}{sep}t={int(time.time())}"
         
-        # 读取数据，强制指定列名
-        df_raw = pd.read_csv(url_with_cache_buster, thousands=",", skiprows=1, names=["date", "category", "item", "amount"])
+        # 读取数据
+        # 注意：如果你原本的表第一行就是数据（没有标题），请把 skiprows=1 删掉
+        df_raw = pd.read_csv(final_url, thousands=",", skiprows=1, names=["date", "category", "item", "amount"])
         
-        # 清洗：去掉全是空的行，并将金额转为数字
-        df_raw = df_raw.dropna(how='all')
-        df_raw["amount"] = pd.to_numeric(df_raw["amount"], errors='coerce').fillna(0)
-        
+        # 彻底清洗：去掉空行
+        df_raw = df_raw.dropna(subset=["amount"]) 
         return df_raw
     except Exception as e:
-        # 如果报错，返回一个带标题的空表，保证后续绘图不崩溃
         return pd.DataFrame(columns=["date", "category", "item", "amount"])
 
 # ========================
