@@ -3,15 +3,24 @@ from datetime import date
 import requests
 import pandas as pd
 
+# ==============================
 # Google Script API
+# ==============================
+
 SHEET_URL = "https://script.google.com/macros/s/AKfycbzxJnB82RKPi-SNVatTZLHtJRBRjdF3vVjHU5SomeFlaozdR-48u3H4diflI9h2WWFjtQ/exec"
 
-# 使用真正CSV导出
+# ==============================
+# Google Sheet CSV
+# ==============================
+
 DATA_URL = "https://docs.google.com/spreadsheets/d/1rCd-REYtsmtQ48mLDYFcp-o_a5WVr8Ihqx9rWS3GDRE/export?format=csv"
 
-st.title("📒 每月收支记录系统")
+st.title("📒 每月收支记录")
 
+# ==============================
 # 新增记录
+# ==============================
+
 st.subheader("新增记录")
 
 d = st.date_input("日期", date.today())
@@ -47,28 +56,44 @@ if st.button("保存记录"):
         requests.post(SHEET_URL, json=data)
         st.success("记录成功")
     except:
-        st.error("写入失败")
+        st.error("写入失败，请检查 Google Script")
 
+# ==============================
 # 读取数据
+# ==============================
+
 st.subheader("📊 最新记录")
 
 try:
 
     df = pd.read_csv(DATA_URL)
 
+    # 强制列名正确
+    df.columns = ["date","category","item","amount"]
+
     # 清理数据
     df["category"] = df["category"].astype(str).str.strip()
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
+    # 显示最近10条
     st.dataframe(df.tail(10))
 
-    # 收入
-    income = df[df["category"] == "收入"]["amount"].sum()
+    # ==============================
+    # 计算收入
+    # ==============================
 
-    # 支出
-    expense = df[df["category"] != "收入"]["amount"].sum()
+    income = df[df["category"].str.contains("收入")]["amount"].sum()
 
+    # ==============================
+    # 计算支出
+    # ==============================
+
+    expense = df[~df["category"].str.contains("收入")]["amount"].sum()
+
+    # ==============================
     # 余额
+    # ==============================
+
     balance = income - expense
 
     st.subheader("💰 当前余额")
@@ -80,14 +105,18 @@ try:
     st.subheader("💵 总收入")
     st.write(round(income,2))
 
-    # 分类统计
+    # ==============================
+    # 支出分类统计
+    # ==============================
+
     st.subheader("📊 支出分类统计")
 
-    expense_df = df[df["category"] != "收入"]
+    expense_df = df[~df["category"].str.contains("收入")]
 
     category_summary = expense_df.groupby("category")["amount"].sum().reset_index()
 
     st.dataframe(category_summary)
 
 except Exception as e:
-    st.write("读取数据失败")
+    st.error("读取数据失败")
+    st.write(e)
