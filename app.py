@@ -39,9 +39,11 @@ if st.button("保存"):
         "amount": amount
     }
 
-    requests.post(SHEET_URL, json=data)
-
-    st.success("记录成功")
+    try:
+        requests.post(SHEET_URL, json=data)
+        st.success("记录成功")
+    except:
+        st.error("写入失败，请检查 Google Script")
 
 # ===== 读取数据 =====
 st.subheader("📊 最新记录")
@@ -50,14 +52,18 @@ try:
 
     df = pd.read_csv(DATA_URL)
 
+    # ⭐ 关键修复：确保 amount 是数字
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
+
     if not df.empty:
 
         st.dataframe(df.tail(10))
 
+        # ===== 总开销 =====
         total_expense = df["amount"].sum()
 
         st.subheader("💸 总开销")
-        st.write(total_expense)
+        st.write(round(total_expense, 2))
 
         # ===== 余额计算 =====
         if salary > 0:
@@ -65,14 +71,14 @@ try:
             balance = salary - total_expense
 
             st.subheader("💰 剩余金额")
-
-            st.write(balance)
+            st.write(round(balance, 2))
 
         # ===== 分类统计 =====
         st.subheader("📊 类别统计")
 
-        st.dataframe(df.groupby("category")["amount"].sum())
+        category_summary = df.groupby("category")["amount"].sum().reset_index()
+
+        st.dataframe(category_summary)
 
 except:
     st.write("暂无记录")
-
